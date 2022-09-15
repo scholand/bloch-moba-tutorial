@@ -6,7 +6,7 @@ jupyter:
       extension: .md
       format_name: markdown
       format_version: '1.3'
-      jupytext_version: 1.14.1
+      jupytext_version: 1.13.6
   kernelspec:
     display_name: Python 3 (ipykernel)
     language: python
@@ -14,17 +14,17 @@ jupyter:
 ---
 
 <!-- #region id="DDooP3kQ2N6w" -->
-# Tutorial about the Bloch Model-Based Reconstruction Tool in BART
+# Tutorial: Bloch Model-Based Reconstruction in BART
 
 
     Author:        Nick Scholand
     Email:         scholand@tugraz.at
-    Institution:   Graz University of Technology
+    Institution:   Graz University of Technology, Graz, Austria
 
 **About the Tutorial**
 
 This tutorial introduces the Bloch model-based reconstruction tool added with the `--bloch` flag to the `moba` tool in the [official BART repository](https://github.com/mrirecon/bart).
-The `--bloch` option in `moba` can run on the CPU only, but it is highly recommended to have a GPU as for example provided by the Google Colab service.
+The `--bloch` option in `moba` can run on the CPU only, but it is highly recommended to have a GPU. Thus, this example is optimized for the Google Colab service providing the hardware infrastructure including a GPU.
 <!-- #endregion -->
 
 <!-- #region id="lZdzii_U2N60" -->
@@ -45,7 +45,7 @@ If you want to use a GPU instance, please turn it on in Google Colab:
 We check which GPU instance was assigned to this notebook.
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="5_gw1eAr2N62" outputId="146476d2-b320-407f-92cd-83659fb44949"
+```bash colab={"base_uri": "https://localhost:8080/"} id="5_gw1eAr2N62" outputId="e2b3273e-f5c3-4633-9c65-0202cf584dc2"
 
 # Use CUDA 10.1 when on Tesla K80
 
@@ -137,7 +137,7 @@ sys.path.append(os.environ['TOOLBOX_PATH'] + "/python")
 We check the installed BART version.
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="HIQs5a1S2N69" outputId="23373c06-7423-46af-d0ce-9d9ce024ba0b"
+```bash colab={"base_uri": "https://localhost:8080/"} id="HIQs5a1S2N69" outputId="2ee36e5f-82b6-47d8-9d42-891212f0fbeb"
 
 echo "# The BART used in this notebook:"
 which bart
@@ -240,6 +240,12 @@ This tutorial assumes basic knowledge about BART cmdline tools. Please check out
 
 <!-- #endregion -->
 
+<!-- #region id="hpkprAXRocoG" -->
+## IR bSSFP Reconstruction
+
+In the first example the Bloch model-based reconstruction is used to determine quantitative parameter maps from an IR bSSFP sequence.
+<!-- #endregion -->
+
 <!-- #region id="tvLLFZyi2N7E" -->
 ### Create Dataset
 
@@ -249,7 +255,7 @@ Here, for its simplicity a single tube is simulated in k-space using a golden-an
 More complex geometries like the NIST phantom require a higher resolution to resolve the relatively smaller individual tubes. Thus, they are too computationally demanding for this simple tutorial.
 <!-- #endregion -->
 
-```bash id="xg8Hi4N92N7E"
+```bash id="xg8Hi4N92N7E" outputId="ed293858-5c74-4f13-8736-fd30997b8f09" colab={"base_uri": "https://localhost:8080/"}
 
 # Sequence Parameter
 TR=0.0045 #[s]
@@ -264,19 +270,16 @@ T1=0.8 # [s]
 T2=0.1 # [s]
 
 # Run simulation and save output to $DURATION variable defining the simulation time
-bart sim --ODE --seq ir-bssfp,tr=$TR,te=$TE,nrep=$REP,pinv,ppl=$TE,trf=$TRF,fa=$FA,bwtp=$BWTP -1 $T1:$T1:1 -2 $T2:$T2:1 simu
+bart sim --ODE --seq IR-BSSFP,TR=$TR,TE=$TE,Nrep=$REP,pinv,ppl=$TE,Trf=$TRF,FA=$FA,BWTP=$BWTP -1 $T1:$T1:1 -2 $T2:$T2:1 simu
 
-# Create Golden-Angle based Trajectory
+# Create Golden-Angle based Trajectory with 2-fold oversampling
 SAMPLES=30
 SPOKES=1
 
-bart traj -x $((2*SAMPLES)) -y $SPOKES -G -t $REP _traj
-
-## Scale trajectory for 2-fold oversampling
-bart scale 0.5 _traj _traj2
+bart traj -x $((2*SAMPLES)) -y $SPOKES -o 2 -G -t $REP _traj
 
 ## The moba tool requires the time dimension to be in (5)!
-bart transpose 5 10 _traj2 traj
+bart transpose 5 10 _traj traj
 
 
 # Simulate Spatial Components
@@ -289,7 +292,7 @@ bart fmac -s $(bart bitmask 6) comp_geom_ksp simu phantom_ksp
 ```
 
 <!-- #region id="mi7vUtW92N7G" -->
-### Inversion Time
+**Inversion Time**  
 
 The inversion time is historically used by the `moba` tool to pass the time information to the underlying analytical forward operators. The Bloch model-based tool, does not require this vector. The timing information is included in the description of the simulated sequence: in the repetition time, the echo time, the number of repetitions,...
 
@@ -313,7 +316,7 @@ The information about the applied sequence is passed with the `--seq` interface.
 More details are requested with:
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="s98psZ-52N7H" outputId="d8e8698c-e44f-4fb8-c02b-26a7b533bee7"
+```bash colab={"base_uri": "https://localhost:8080/"} id="s98psZ-52N7H" outputId="077379cb-d65c-4c96-8567-39f1531fb497"
 
 bart moba --seq h
 ```
@@ -325,7 +328,7 @@ In this example, we pass the sequence type, the repetition and echo time and man
 The simulation type can be controlled with the `moba --sim` interface:
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="FYnPIV8_2N7J" outputId="2dc1a1a0-22ce-4f1c-ac5f-303ac9a8630d"
+```bash colab={"base_uri": "https://localhost:8080/"} id="FYnPIV8_2N7J" outputId="dd7029e4-d32b-4265-fdb8-ff547c8ea0e2"
 
 bart moba --sim h
 ```
@@ -333,10 +336,12 @@ bart moba --sim h
 <!-- #region id="50FyP5OF2N7K" -->
 Currently, it supports an ordinary differential equation solver (ODE) and a state-transition matrix (STM) simulation of the Bloch equations.
 
-The flag `--img_dims $DIM:$DIM:1` defines the $k_{\text{max}}$ of the actual k-space with taking the two-fold oversampling into account.
+The flag `--img_dims $DIM:$DIM:1` defines the $k_{\text{max}}$ of the actual k-space by taking the two-fold oversampling into account.
 
-The `moba --other` interface allows passing further parameters like the partial derivative scalings, which define the preconditioning of the reconstructed parameter maps: [$R_1$, $M_0$, $R_2$, $B_1$]. With `--other pdscale=1:1:3:0` the optimization of the $B_1$ mapping is turned off (set to 0), the algorithm optimizes for $\hat{R_2}=3\cdot R_2$ and the other parameter maps are untouched.
-In praxis this preconditioning often need to be tuned for a smooth convergence of the optimization. They scaling depends on the sequence type and its individual parameters.
+The `moba --other` interface allows for passing further parameters like the partial derivative scalings, which define the preconditioning of the reconstructed parameter maps: [$R_1$, $M_0$, $R_2$, $B_1$]. With `--other pdscale=1:1:3:0` the optimization of the $B_1$ mapping is turned off (set to 0), the algorithm optimizes for $\hat{R_2}=3\cdot R_2$ and the other parameter maps are untouched.
+In praxis this preconditioning often need to be tuned for a smooth convergence of the optimization. The scaling depends on the sequence type and its individual parameters. Later we will show an additional example for an IR FLASH sequence.
+
+Besides tuning the preconditioning, we need to set the initialization values for the reconstruction `pinit=3:1:1:1`. Both are part of moba's `--other` interface. Please run `bart moba --other h` for more details. Further, the reconstruction needs some information about data and PSF scaling: `--scale_data=5000. --scale_psf=1000. --normalize_scaling`.
 
 The iteratively regularized Gauss-Newton method and FISTA are both controlled similar to previous model-based publications by Xiaoqing Wang:
 
@@ -346,14 +351,14 @@ The iteratively regularized Gauss-Newton method and FISTA are both controlled si
 
 * Wang, X, Tan, Z, Scholand, N, Roeloffs, V, Uecker, M. Physics-based reconstruction methods for magnetic resonance imaging. Phil Trans R Soc. 2021; A379: 20200196. https://doi.org/10.1098/rsta.2020.0196   .
 
-we will not go into very detail here, but the passed parameters are: `-i$ITER -C$INNER_ITER -s$STEP_SIZE -B$MIN_R1 -o$OS -R$REDU_FAC -j$LAMBDA -N`.
+we will not go into detail here, but the passed parameters are: `-i$ITER -C$INNER_ITER -s$STEP_SIZE -B$MIN_R1 -o$OS -R$REDU_FAC -j$LAMBDA -N`.
 
 After discussing the interface, the next cell will execute the reconstruction. Depending on your system and the GPU this step can take about a minute.
 
 If you do not want to use a GPU, please remove the `-g` flag.
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="DH1sUBHs2N7L" outputId="252dcef2-b3d7-4a66-879b-f772318b5849"
+```bash colab={"base_uri": "https://localhost:8080/"} id="DH1sUBHs2N7L" outputId="450a9b75-0f4e-49b5-8ea1-d4029a546b51"
 
 OS=1
 REDU_FAC=3
@@ -372,8 +377,8 @@ FA=45 #[deg]
 BWTP=4
 
 bart moba --bloch --sim STM --img_dims $DIM:$DIM:1 \
-        --seq ir-bssfp,tr=${TR},te=${TE},ppl=${TE},fa=${FA},trf=${TRF},bwtp=${BWTP},pinv \
-        --other pdscale=1:1:3:0 \
+        --seq IR-BSSFP,TR=${TR},TE=${TE},ppl=${TE},FA=${FA},Trf=${TRF},BWTP=${BWTP},pinv \
+        --other pinit=3:1:1:1,pscale=1:1:3:0 --scale_data=5000. --scale_psf=1000. --normalize_scaling \
         -g \
         -i$ITER -C$INNER_ITER -s$STEP_SIZE -B$MIN_R1 -d 4 -o$OS -R$REDU_FAC -j$LAMBDA -N \
         -t traj phantom_ksp TI reco sens
@@ -389,13 +394,13 @@ The chosen debug level of `-d 4` leads to the output above. It is highly recomme
 The output of the Bloch model-based reconstruction has the dimensions
 <!-- #endregion -->
 
-```bash colab={"base_uri": "https://localhost:8080/"} id="mDvjMyq42N7N" outputId="03131097-a435-44bf-a7ce-36d6a94a85ee"
+```bash colab={"base_uri": "https://localhost:8080/"} id="mDvjMyq42N7N" outputId="79e4d7ab-f184-423c-d4a1-a8481140f603"
 
 cat reco.hdr
 ```
 
 <!-- #region id="KYcsmtaI2N7O" -->
-40 x 40 samples for each of the 4 parameter maps.
+60 x 60 samples for each of the 4 parameter maps.
 
 Currently, the two-fold oversampling is not automatically compensated. Thus, we resize the data with `bart resize -c 0 $DIM 1 $DIM ...`.
 
@@ -406,7 +411,7 @@ The 6th dimension includes the parameter maps $R_1$, $M_0$, $R_2$ and $B_1$. We 
 
 # Post-Process Reconstruction
 
-DIM=20
+DIM=30
 T1=0.8 #[s]
 T2=0.1 #[s]
 
@@ -445,16 +450,159 @@ rm _famap.cfl _famap.hdr
 Finally, the maps can be visualized.
 <!-- #endregion -->
 
-```python colab={"base_uri": "https://localhost:8080/", "height": 404} id="a9N_K7932N7P" outputId="092e03d2-c9d6-426a-fb5a-b4d0089719fd"
+```python colab={"base_uri": "https://localhost:8080/", "height": 404} id="a9N_K7932N7P" outputId="e122774e-0a3d-4f00-bc56-e8dade06d047"
 diffplot('t1map', 't1ref', 2, 'viridis', 'T$_1$ / s')
 diffplot('t2map', 't2ref', 0.2, 'copper', 'T$_2$ / s')
 diffplot('famap', 'faref', 1.1, 'hot', 'FA/FA$_{nom}$')
 ```
 
 <!-- #region id="7bvVsrrl2N7Q" -->
-The difference in the relative flip angle map is zero, because the optimization was previously turned off by setting the preconditioning scaling to 0.
+The difference in the relative flip angle map is zero, because the flipangle optimization was turned off by setting the preconditioning scaling to 0: `pscale=1:1:3:0`.
 
-We can observe some small checkboard artifacts in the maps, but the overall error is small.
+We can observe some small checkboard artifacts and differences close to the edges of the maps, but the overall error for the reconstructed $T_1$ and $T_2$ maps is small.
+<!-- #endregion -->
+
+<!-- #region id="9Qd8CsYloyZl" -->
+## IR FLASH Reconstruction
+
+Here, we present the reconstruction of IR FLASH data with the Bloch model-based reconstruction tool.
+<!-- #endregion -->
+
+<!-- #region id="jbu73cVHsGLf" -->
+### Create Dataset
+
+The simulated data is created in the same way as presented in the example with an IR bSSFP sequence. Only some sequence parameters like TR, TE and the flipangle have been modified.
+<!-- #endregion -->
+
+```bash outputId="b446c98b-7a1b-4502-b5e8-0fa1f8d980b8" colab={"base_uri": "https://localhost:8080/"} id="UefoXLLrovyy"
+
+# Sequence Parameter
+TR=0.003 #[s]
+TE=0.0017 #[s]
+TRF=0.001 #[s]
+REP=600
+FA=8 #[deg]
+BWTP=4
+
+# Tissue Parameter
+T1=0.8 # [s]
+T2=0.1 # [s]
+
+# Run simulation and save output to $DURATION variable defining the simulation time
+bart sim --ODE --seq IR-FLASH,TR=$TR,TE=$TE,Nrep=$REP,pinv,ppl=$TE,Trf=$TRF,FA=$FA,BWTP=$BWTP -1 $T1:$T1:1 -2 $T2:$T2:1 simu
+
+# Create Golden-Angle based Trajectory with 2-fold oversampling
+SAMPLES=30
+SPOKES=1
+
+bart traj -x $((2*SAMPLES)) -y $SPOKES -G -t $REP _traj
+
+## The moba tool requires the time dimension to be in (5)!
+bart transpose 5 10 _traj traj
+
+
+# Simulate Spatial Components
+
+## Create phantom based on trajectory
+bart phantom -c -k -t traj comp_geom_ksp
+
+# Combine simulated signal and spatial basis to create numerical dataset
+bart fmac -s $(bart bitmask 6) comp_geom_ksp simu phantom_ksp
+```
+
+<!-- #region id="_BgANAdYsK4J" -->
+### Reconstruction
+
+The reconstruction works similar as in the IR bSSFP case. Only the modified sequence parameters and the partial scaling need to be adjusted.
+
+In the IR bSSFP reconstruction we used a scaling of `pscale=1:1:3:0`, which turned off the flipangle optimization and preconditioned to optimize for $\hat{R_2}=3\cdot R_2$ instead of $R_2$. An IR FLASH sequence is sensitive to $T_1$, $M_0$ and the flipangle. Therefore, the scaling is set to `pscale=1:1:0:1`. It constraints $R_2$ to be fixed and optimized for the flipangle. To observe an effect of the flipangle optimization the reconstruction assumes a nominal flipangle of 6 degree, which differs from the simulation. Thus, we expect a resulting relative flipangle map of $8/6=1.\bar{33}$.
+<!-- #endregion -->
+
+```bash colab={"base_uri": "https://localhost:8080/"} outputId="a599afc0-e28a-47eb-ed33-8fe9e15e1a7c" id="gtYgPACYo_8m"
+
+OS=1
+REDU_FAC=3
+INNER_ITER=250
+STEP_SIZE=0.95
+MIN_R1=0.001
+ITER=8
+LAMBDA=0.0005
+
+DIM=30
+TR=0.003 #[s]
+TE=0.0017 #[s]
+TRF=0.001 #[s]
+REP=600
+FA=6 #[deg] ! Note: not the same as in the simulation !
+BWTP=4
+
+bart moba --bloch --sim STM --img_dims $DIM:$DIM:1 \
+        --seq IR-FLASH,TR=${TR},TE=${TE},ppl=${TE},FA=${FA},Trf=${TRF},BWTP=${BWTP},pinv \
+        --other pinit=3:1:1:1,pscale=1:1:0:1 --scale_data=5000. --scale_psf=1000. --normalize_scaling \
+        -g \
+        -i$ITER -C$INNER_ITER -s$STEP_SIZE -B$MIN_R1 -d 4 -o$OS -R$REDU_FAC -j$LAMBDA -N \
+        -t traj phantom_ksp TI reco sens
+```
+
+<!-- #region id="SOE3KXUBsOFe" -->
+### Post-Processing
+
+The post-processing is the same as in the IR bSSFP example. Only the reference values have been adjusted.
+<!-- #endregion -->
+
+```bash id="C6ce24MYpMR5"
+
+# Post-Process Reconstruction
+
+DIM=30
+T1=0.8        # [s]
+T2=1          # [s], initialization value! We constraint T2 to stay constant! -> pscale=1:1:0:1
+FA_EFF=1.3333 # [s], Simulated FA (8 deg) / Reconstructed FA (6 deg)
+
+
+# Create Reference Maps
+
+bart phantom -c -x $DIM circ
+
+bart scale -- $T1 circ t1ref
+bart scale -- $T2 circ t2ref
+bart scale -- $FA_EFF circ faref
+
+
+# Resize output of Reconstruction
+# -> compensate for 2-fold oversampling
+bart resize -c 0 $DIM 1 $DIM reco reco_crop
+
+
+# Convert and Mask Reconstructed Maps
+
+bart slice 6 0 reco_crop r1map
+bart spow -- -1 r1map _t1map
+bart fmac _t1map circ t1map #mask
+rm _t1map.cfl _t1map.hdr
+
+bart slice 6 2 reco_crop r2map
+bart spow -- -1 r2map _t2map
+bart fmac _t2map circ t2map #mask
+rm _t2map.cfl _t2map.hdr
+
+bart slice 6 3 reco_crop _famap
+bart fmac _famap circ famap #mask
+rm _famap.cfl _famap.hdr
+```
+
+```python colab={"base_uri": "https://localhost:8080/", "height": 404} outputId="708fd603-f9f4-44b6-efc5-3011523dbdb7" id="tpeYIeIvpVpS"
+diffplot('t1map', 't1ref', 2, 'viridis', 'T$_1$ / s')
+diffplot('t2map', 't2ref', 0.2, 'copper', 'T$_2$ / s')
+diffplot('famap', 'faref', 1.5, 'hot', 'FA/FA$_{nom}$')
+```
+
+<!-- #region id="rjiXOqt-sSBP" -->
+The $T_1$ map only shows small errors to the reference.
+
+The constrainting of the $T_2$ map by passing `pscale=1:1:0:1` to the `moba` call is visualized in the final $T_2$ map, because it has the same value it has been initialized with.
+
+The reconstruction assumed a nominal flipangle of 6 degree, while the simulation was based on an 8 degree pulse. Thus, the reconstructed relative FA map is about 1.33 compensating the model difference.
 <!-- #endregion -->
 
 ```bash id="bl5ItRth2N7Q"
